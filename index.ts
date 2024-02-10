@@ -1,57 +1,85 @@
-import { getItemDetail, getShippingCost, placeBid } from "./utils/api";
-import { convertTimeToSeconds } from "./utils/conversions";
+import { getFavoriteItems } from "./utils/api";
+import { sleep, monitorAuction } from "./utils/utilities";
+import {
+  intro,
+  outro,
+  select,
+  spinner,
+  text,
+  isCancel,
+  cancel,
+} from "@clack/prompts";
 
-const bidSafety = process.env.GOODWILL_SNIPPER_BID_SAFETY || true;
-const maxBid: number = +(process.env.GOODWILL_SNIPPER_MAX_BID || 0); // in dollars
-const itemId: number = +(process.env.GOODWILL_SNIPPER_ITEM_ID || 0); // Item ID
-const zipCode = process.env.GOODWILL_SNIPPER_ZIP_CODE || ""; // Zip Code
-const bearerToken = process.env.GOODWILL_SNIPPER_BEARER_TOKEN || ""; // Bearer Token
+const bidSafety: boolean = JSON.parse(
+  process.env.GOODWILL_SNIPPER_BID_SAFETY || "true",
+);
+let maxBid: number = +(process.env.GOODWILL_SNIPPER_MAX_BID || 0); // in dollars
+let itemId: number = +(process.env.GOODWILL_SNIPPER_ITEM_ID || 0); // Item ID
+let snipperLeadTime: number = +(process.env.GOODWILL_SNIPPER_LEAD_TIME || 0); // in seconds
+const zipCode: string = process.env.GOODWILL_SNIPPER_ZIP_CODE || ""; // Zip Code
+const bearerToken: string = process.env.GOODWILL_SNIPPER_BEARER_TOKEN || ""; // Bearer Token
 
 try {
-  const shippingCost = await getShippingCost(itemId, zipCode, bearerToken);
-  while (true) {
-    const itemDetail = await getItemDetail(itemId, bearerToken);
-    const timeLeft = convertTimeToSeconds(itemDetail.remainingTime);
+  intro(`Welcome to Goodwill Snipper!`);
+  const wrapper = spinner();
+  wrapper.start("Setting Environment Variables");
 
-    const display = {
-      title: itemDetail.title,
-      itemId: itemDetail.itemId,
-      numberOfBids: itemDetail.numberOfBids,
-      remainingTime: itemDetail.remainingTime,
-      bidIncrement: itemDetail.bidIncrement,
-      startingPrice: itemDetail.startingPrice,
-      currentPrice: itemDetail.currentPrice,
-      minimumBid: itemDetail.minimumBid,
-      isHighBidderLogIn: itemDetail.bidHistory.isHighBidderLogIn,
-      timeLeft: timeLeft,
-      serverTime: itemDetail.serverTime,
-      bidSafety: bidSafety,
-      maxBid: maxBid,
-      shippinCost: shippingCost,
-    };
-    console.log(display);
+  const s = spinner();
 
-    if (itemDetail.bidHistory.auctionClosed) {
-      console.log("Auction has ended");
-      break;
-    } else if (
-      timeLeft < 4 &&
-      itemDetail.minimumBid < maxBid &&
-      !bidSafety &&
-      !itemDetail.bidHistory.isHighBidderLogIn
-    ) {
-      console.log("Bidding now");
-      const bidAmount = itemDetail.minimumBid + itemDetail.bidIncrement;
-      const response = await placeBid(
-        itemDetail.itemId,
-        itemDetail.sellerId,
-        bidAmount,
-        bearerToken,
-      );
-      console.log(response);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  const favoriteItems = await getFavoriteItems(bearerToken);
+
+  const auction = await select({
+    message: "Pick an Item.",
+    options: favoriteItems,
+  });
+
+  itemId = auction as number;
+
+  const maxBidInput = await text({
+    message: "Enter your max bid",
+    initialValue: maxBid.toString(),
+    validate(value) {
+      if (value.length === 0) return `Value is required!`;
+      if (isNaN(+value)) return `Value must be a number!`;
+    },
+  });
+
+  maxBid = parseInt(maxBidInput.toString());
+
+  const leadTimeInput = await text({
+    message: "Enter your lead time",
+    initialValue: snipperLeadTime.toString(),
+    validate(value) {
+      if (value.length === 0) return `Value is required!`;
+      if (isNaN(+value)) return `Value must be a number!`;
+    },
+  });
+
+  snipperLeadTime = parseInt(leadTimeInput.toString());
+
+  s.start(`Loading Values...`);
+  await sleep(200);
+  s.stop(`Item ID: ${itemId}`);
+  s.stop(`Max Bid: ${maxBid}`);
+  s.stop(`Lead Time: ${snipperLeadTime}`);
+
+  wrapper.stop("Environment Variables Set!");
+
+  if (isCancel(wrapper)) {
+    cancel("Operation cancelled.");
+    process.exit(0);
   }
+
+  await monitorAuction(
+    itemId,
+    zipCode,
+    bearerToken,
+    maxBid,
+    snipperLeadTime,
+    bidSafety,
+  );
+
+  outro(`Goodbye!`);
 } catch (error) {
   console.error(error);
 }
