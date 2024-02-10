@@ -78,7 +78,6 @@ export async function getShippingCost(
   const regex = /Total Shipping and Handling: \$([\d.]+)/;
 
   const text = await response.text();
-  console.log(text);
 
   const match = text.match(regex);
 
@@ -110,6 +109,19 @@ export async function getFavoriteItems(bearerToken: string) {
       credentials: "include",
     },
   );
+  const json = await response.json();
 
-  return response.json();
+  if (json && Array.isArray(json.data)) {
+    // Extract 'title' and 'itemId' and format the data
+    const formattedData = json.data
+      .filter((item: any) => item.type === "Open")
+      .map((item: any) => ({
+        value: String(item.itemId),
+        label: item.title,
+      }));
+    return formattedData;
+  } else {
+    console.error("Invalid JSON format");
+    return [];
+  }
 }
