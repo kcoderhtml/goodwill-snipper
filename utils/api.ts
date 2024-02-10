@@ -117,8 +117,34 @@ export async function getFavoriteItems(bearerToken: string) {
       .filter((item: any) => item.type === "Open")
       .map((item: any) => ({
         value: String(item.itemId),
-        label: item.title,
+        label: `${item.title} - ${item.numBids} bids`,
       }));
+
+    // loop over data and add current bid amount and end date to label
+    for (let i = 0; i < formattedData.length; i++) {
+      const itemDetail = await getItemDetail(
+        parseInt(formattedData[i].value),
+        bearerToken,
+      );
+
+      let cost;
+      if (itemDetail.bidHistory.isHighBidderLogIn) {
+        cost = itemDetail.currentPrice;
+      } else {
+        cost = itemDetail.minimumBid;
+      }
+
+      let highbid;
+      if (itemDetail.bidHistory.isHighBidderLogIn) {
+        highbid = "✅";
+      } else {
+        highbid = "❌";
+      }
+
+      formattedData[i].label +=
+        ` - $${cost} - ${highbid} - ${itemDetail.remainingTime} `;
+    }
+
     return formattedData;
   } else {
     console.error("Invalid JSON format");
