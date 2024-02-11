@@ -27,6 +27,10 @@ export async function monitorAuction(
   bidSafety: boolean,
 ) {
   try {
+    const itemDetail = await getItemDetail(itemId, bearerToken);
+    log.info(
+      `${bidSafety ? `Monitoring "${itemDetail.title}"` : `Snipping "${itemDetail.title}" up to a max bid of $${maxBid}, ${snipperLeadTime} seconds before auction ends.`}`,
+    );
     const s = spinner();
     s.start(`Monitoring Auction...`);
     const shippingCost = await getShippingCost(itemId, zipCode, bearerToken);
