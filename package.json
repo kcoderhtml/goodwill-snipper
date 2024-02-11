@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clack/core": "^0.3.3",
-    "@clack/prompts": "^0.7.0"
+    "@clack/prompts": "^0.7.0",
+    "ts-command-line-args": "^2.5.1"
   }
 }
