@@ -1,5 +1,5 @@
 import { getFavoriteItems } from "./utils/api";
-import { sleep, monitorAuction } from "./utils/utilities";
+import { monitorAuction } from "./utils/utilities";
 import {
   intro,
   outro,
@@ -8,9 +8,10 @@ import {
   text,
   isCancel,
   cancel,
+  confirm,
 } from "@clack/prompts";
 
-const bidSafety: boolean = JSON.parse(
+let bidSafety: boolean = JSON.parse(
   process.env.GOODWILL_SNIPPER_BID_SAFETY || "true",
 );
 let maxBid: number = +(process.env.GOODWILL_SNIPPER_MAX_BID || 0); // in dollars
@@ -57,11 +58,18 @@ try {
 
   snipperLeadTime = parseInt(leadTimeInput.toString());
 
+  const safetyInput = await confirm({
+    message: "Do you want to enable bid safety?",
+  });
+
+  bidSafety = JSON.parse(safetyInput.toString());
+
   s.start(`Loading Values...`);
-  await sleep(200);
+  await new Promise((resolve) => setTimeout(resolve, 100));
   s.stop(`Item ID: ${itemId}`);
   s.stop(`Max Bid: ${maxBid}`);
   s.stop(`Lead Time: ${snipperLeadTime}`);
+  s.stop(`Bid Safety: ${bidSafety}`);
 
   wrapper.stop("Environment Variables Set!");
 

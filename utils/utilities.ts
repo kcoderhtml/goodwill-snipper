@@ -1,9 +1,5 @@
-import { note, log, spinner } from "@clack/prompts";
+import { log, spinner } from "@clack/prompts";
 import { getShippingCost, getItemDetail, placeBid } from "./api";
-
-export async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export function convertTimeToSeconds(remainingTime: string): number {
   const timeRegex = /(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?/;
@@ -38,36 +34,8 @@ export async function monitorAuction(
       const itemDetail = await getItemDetail(itemId, bearerToken);
       const timeLeft = convertTimeToSeconds(itemDetail.remainingTime);
 
-      const display = {
-        title: itemDetail.title,
-        itemId: itemDetail.itemId,
-        numberOfBids: itemDetail.numberOfBids,
-        remainingTime: itemDetail.remainingTime,
-        bidIncrement: itemDetail.bidIncrement,
-        startingPrice: itemDetail.startingPrice,
-        currentPrice: itemDetail.currentPrice,
-        minimumBid: itemDetail.minimumBid,
-        isHighBidderLogIn: itemDetail.bidHistory.isHighBidderLogIn,
-        timeLeft: timeLeft,
-        serverTime: itemDetail.serverTime,
-        bidSafety: bidSafety,
-        maxBid: maxBid,
-        shippingCost: shippingCost,
-      };
-      note(`---
-${display.title}
-Item ID: ${display.itemId}
-Number of Bids: ${display.numberOfBids}
-Remaining Time: ${display.remainingTime}
-Starting Price: ${display.startingPrice}
-Current Price: ${display.currentPrice}
-Minimum Bid: ${display.minimumBid}
-Shipping Cost: ${display.shippingCost}
-Is High Bidder: ${display.isHighBidderLogIn}
-Time Left: ${display.timeLeft}
----
-Safety: ${display.bidSafety}
----`);
+      const display = `"${itemDetail.title}" - ${itemDetail.numberOfBids} bids - ${itemDetail.remainingTime}- ${itemDetail.bidHistory.isHighBidderLogIn ? `$${itemDetail.currentPrice} - ✅` : `$${itemDetail.minimumBid} - ❌`} - ${bidSafety ? `🔐` : `🔓`} - $${shippingCost} shipping cost`;
+      s.message(display);
 
       if (itemDetail.bidHistory.auctionClosed) {
         console.log("Auction has ended");
